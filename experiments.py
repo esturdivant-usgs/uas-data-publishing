@@ -20,8 +20,10 @@ tfmt_gpx = '%Y-%m-%dT%H:%M:%S-04:00' #2017-05-04T14:14:12-04:00
 # Enter name of .gpx file and folder with associated images
 # logfile = r'G:\2017-06-12_Duck_UAS\gpx\f5.gpx'
 # imagefolder = r'G:\2017-06-12_Duck_UAS\jpeg\f5'
-logfile = r'/Users/emilysturdivant/GitHub/uas-data-publishing/solo2.gpx'
-imagefolder = r'/Users/emilysturdivant/GitHub/uas-data-publishing/solo2.gpx'
+homedir = r'/Users/emilysturdivant/GitHub/uas-data-publishing'
+logfile = os.path.join('solo2.gpx')
+imagefolder = os.path.join('solo2.gpx')
+
 
 # Enter time offset (seconds) so that imagetime + offset = log time
 toff = -4.*3600. # The GPS data is being read in local time, the images are stamped with UTC
@@ -30,7 +32,9 @@ toff = -4.*3600. # The GPS data is being read in local time, the images are stam
 def dt_to_UTCval(dtstr, in_fmt, local_tz='US/Eastern'):
     # convert datetime string in local time to timestamp in UTC
     eastern = pytz.timezone(local_tz)
-    timeval = eastern.localize(DT.strptime(e.text, in_fmt), is_dst=None).astimezone(pytz.utc).timestamp()
+    timeval = (eastern.localize(DT.strptime(e.text, in_fmt), is_dst=None)
+                        .astimezone(pytz.utc)
+                        .timestamp())
     return(timeval)
 
 def gpx_tag_to_pdseries(tree, namespace, tag):
@@ -50,9 +54,13 @@ gpxdf = lonlat
 # time
 tag = 'time'
 elist = tree.xpath('./def:trk//def:trkpt//def:'+tag, namespaces=namespace)
-# time = pd.DataFrame([dt_to_UTCval(e.text, tfmt_gpx, local_tz='US/Eastern') for e in elist], columns=[tag])
-# time = [eastern.localize(DT.strptime(e.text, tfmt_gpx), is_dst=None).astimezone(pytz.utc).timestamp() for e in elist]
-gpxdf = gpxdf.join(pd.DataFrame([dt_to_UTCval(e.text, tfmt_gpx, local_tz='US/Eastern') for e in elist], columns=[tag]))
+local_tz='US/Eastern'
+t = [pytz.timezone(local_tz).localize(DT.strptime(e.text, tfmt_gpx), is_dst=None)
+                            .astimezone(pytz.utc)
+                            .timestamp() for e in elist]
+# t = [dt_to_UTCval(e.text, tfmt_gpx, local_tz='US/Eastern') for e in elist]
+t = pd.Series(t, name=tag)
+gpxdf = gpxdf.join(t)
 
 # all other tags
 taglist = ['ele', 'ele2', 'course', 'roll', 'pitch', 'mode']
@@ -89,7 +97,7 @@ print("{} from {} {} to {} {}".format(logfile,time[0],dn[0],time[-1],dn[-1]))
 
 # interpolate into GPX data
 data = gpxdf # sherwood: lat, lon, ele
-dn = gpsdf.time
+dn = gpxdf.time
 
 # get values for image data
 imgdf...
