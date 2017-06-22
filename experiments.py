@@ -24,17 +24,16 @@ homedir = r'/Users/emilysturdivant/GitHub/uas-data-publishing'
 logfile = os.path.join('solo2.gpx')
 imagefolder = os.path.join('solo2.gpx')
 
-
 # Enter time offset (seconds) so that imagetime + offset = log time
 toff = -4.*3600. # The GPS data is being read in local time, the images are stamped with UTC
 
 #%% Functions
 def dt_to_UTCval(dtstr, in_fmt, local_tz='US/Eastern'):
     # convert datetime string in local time to timestamp in UTC
-    eastern = pytz.timezone(local_tz)
-    timeval = (eastern.localize(DT.strptime(e.text, in_fmt), is_dst=None)
-                        .astimezone(pytz.utc)
-                        .timestamp())
+    timeval = (pytz.timezone(local_tz)
+                    .localize(DT.strptime(e.text, in_fmt), is_dst=None)
+                    .astimezone(pytz.utc)
+                    .timestamp())
     return(timeval)
 
 def gpx_tag_to_pdseries(tree, namespace, tag):
@@ -55,10 +54,7 @@ gpxdf = lonlat
 tag = 'time'
 elist = tree.xpath('./def:trk//def:trkpt//def:'+tag, namespaces=namespace)
 local_tz='US/Eastern'
-t = [pytz.timezone(local_tz).localize(DT.strptime(e.text, tfmt_gpx), is_dst=None)
-                            .astimezone(pytz.utc)
-                            .timestamp() for e in elist]
-# t = [dt_to_UTCval(e.text, tfmt_gpx, local_tz='US/Eastern') for e in elist]
+t = [dt_to_UTCval(e.text, tfmt_gpx, local_tz=local_tz) for e in elist]
 t = pd.Series(t, name=tag)
 gpxdf = gpxdf.join(t)
 
