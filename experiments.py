@@ -86,3 +86,22 @@ print("{}, {}, {}".format(img_name[0],img_dt[0],img_dn[0]))
 print("{}, {}, {}".format(img_name[-1],img_dt[-1],img_dn[-1]))
 # print first and last times in .gpx file
 print("{} from {} {} to {} {}".format(logfile,time[0],dn[0],time[-1],dn[-1]))
+
+# interpolate into GPX data
+data = gpxdf # sherwood: lat, lon, ele
+dn = gpsdf.time
+
+# get values for image data
+imgdf...
+
+
+#%% set up interpolation
+set_interp = interp1d(dn, data, kind='linear')
+# loop through the images and interpolate .gpx data
+for i in range(len(img_name)):
+    if( img_dn[i]>=dn[0] and img_dn[i]<=dn[-1] ):
+        # image time is within bounds of .gpx data
+        img_data[:,i] = set_interp(img_dn[i])
+    else:
+        # image time is not within .gpx data
+        print('No GPS data for {} {}'.format(img_name[i],img_dt[i]))
