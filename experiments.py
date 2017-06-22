@@ -6,6 +6,7 @@ import copy
 from scipy.interpolate import interp1d
 from PIL import Image, ExifTags
 import datetime as dt
+from datetime import datetime as DT
 import pandas as pd
 from lxml import etree
 
@@ -24,7 +25,11 @@ toff = -4.*3600. # The GPS data is being read in local time, the images are stam
 
 #%%
 # How to get datetime as single value: dt.timestamp(), only python3.3 and above
-dtn=dt.datetime(2012, 2, 13, 6, 56, 2, 619000)
+dtn=DT(2012, 2, 13, 6, 56, 2, 619000)
+eastern = pytz.timezone(local_tz)
+time = eastern.localize(time, is_dst=None)
+timez = time.astimezone(pytz.utc)
+timez = timez.timestamp()
 dtn.timestamp()
 
 
@@ -40,8 +45,33 @@ lonlat = pd.DataFrame(lonlat, columns=['lat', 'lon'])
 
 # time
 elist = tree.xpath('./def:trk//def:trkpt//def:'+tag, namespaces=namespace)
-time = [dt.datetime.strptime(e.text, fmt).timestamp() for e in elist]
+# time = [DT.strptime(e.text, fmt).timestamp() for e in elist]
+local_tz='US/Eastern'
+eastern = pytz.timezone(local_tz)
+time = [DT.strptime(e.text, fmt) for e in elist]
+time = eastern.localize(time, is_dst=None)
+timez = time.astimezone(pytz.utc)
+timez = timez.timestamp()
+
+#TRY THIS:
+time = [eastern.localize(DT.strptime(e.text, fmt), is_dst=None).astimezone(pytz.utc).timestamp() for e in elist]
+
+# TRY function:
+def dt_to_val(dtstr, in_fmt, local_tz='US/Eastern'):
+    # convert datetime string in local time to timestamp in UTC
+    dt = DT.strptime(dtstr, in_fmt)
+    eastern = pytz.timezone(local_tz)
+    dt = eastern.localize(dt, is_dst=None)
+    dtz = dt.astimezone(pytz.utc)
+    timeval = dtz.timestamp()
+    return(timeval)
+
+timeval = dt_to_val(dtstr, in_fmt, local_tz='US/Eastern')
+time = [dt_to_val(e.text, fmt, local_tz='US/Eastern') for e in elist]
+
+# convert to DF
 time = pd.DataFrame(time, columns=['time'])
+
 
 # Elevation
 tag = 'ele'
@@ -55,7 +85,7 @@ pd.DataFrame(columns={'lat':lonlat[:0]})
 
 def get_tagvalue_from_xml(tree, namespace, tag, fmt):
     elist = tree.xpath('./def:trk//def:trkpt//def:'+tag, namespaces=namespace)
-    ls = [dt.datetime.strptime(e.text, fmt).timestamp() for e in elist]
+    ls = [DT.strptime(e.text, fmt).timestamp() for e in elist]
     df = pd.DataFrame(ls, columns=[tag])
     return(df)
 
