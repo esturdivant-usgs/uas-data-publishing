@@ -201,3 +201,53 @@ plt.show()
 # TODO - write a .csv file with columns in the in the correct order for Photoscan
 for i in range(10):
     print("{}, {}, {}, {}".format(img_name[i],img_dt[i],img_data[0,i],img_data[1,i],img_data[2,i]))
+
+
+
+# # experiments:
+# # select images with a matching GPS time and those without
+# matches = imgdf[imgdf[timecol].isin(gpxdf[timecol])] # All images with time logged by GPS
+# missing_idx = ~(imgdf[timecol].isin(gpxdf[timecol])) # All images with time logged by GPS
+# imgdf.loc[missing_idx, 'interpolated'] = 1
+# print('Images with exact GPS time match: ', matches.shape[0])
+# print('Images without exact GPS time match: ', missing.shape[0])
+
+# # set up interpolation
+# # gpx4interp = gpxdf[['lat','lon','ele']]
+# # set_interp = interp1d(gpxdf[timecol], gpx4interp, kind='linear', axis=0)
+# # imgdf.apply(set_interp(timecol), axis=1)
+
+# # gpxdf.interpolate(method='time')
+# # # for use filling NaNs: nans in gaps in data, then interpolate,
+# # # 'time' interpolation works on daily and higher resolution data to interpolate given length of interval
+# # # axis: # 0: fill column-by-column # 1: fill row-by-row
+# # #set time to index, then reindex to consistent time steps, it will add missing times and put nan values; then use apply to interpolate
+# timecol = 'time_utc'
+# # drop duplicate time values; alternative: add specificity to them...
+# df_deduped = gpxdf.drop_duplicates(subset=timecol, keep='first')
+# df = df_deduped.set_index(timecol)
+# df_reindexed = df.reindex(pd.date_range(start=df.index.min(),end=df.index.max()), copy=True)
+# df_reindexed.index
+# # print(df.index.min(), df.index.max())
+# # df_reindexed.head()
+# df_reindexed.interpolate(method='linear')
+
+# # df2 = df.reindex(arange(time))
+# # df2.apply(pandas.Series.interpolate)
+
+# # # alternative:
+# # def getExtrapolatedInterpolatedValue(x, y):
+# #     global dataGrid
+# #     if x not in dataGrid.index:
+# #         dataGrid.ix[x] = nan
+# #         dataGrid = dataGrid.sort()
+# #         dataGrid = dataGrid.interpolate(method='index', axis=0).ffill(axis=0).bfill(axis=0)
+
+# #     if y not in dataGrid.columns.values:
+# #         dataGrid = dataGrid.reindex(columns=numpy.append(dataGrid.columns.values, y))
+# #         dataGrid = dataGrid.sort_index(axis=1)
+# #         dataGrid = dataGrid.interpolate(method='index', axis=1).ffill(axis=1).bfill(axis=1)
+
+# #     return dataGrid[y][x]
+# # print getExtrapolatedInterpolatedValue(2, 1.4)
+# # #
