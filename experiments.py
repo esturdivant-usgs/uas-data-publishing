@@ -23,18 +23,18 @@ homedir = r'/Users/emilysturdivant/Desktop/uas_data'
 logfile = os.path.join(homedir, 'f8.gpx')
 imagefolder = os.path.join(homedir, 'f8')
 
-<<<<<<< HEAD
-survey_id = '2016-010FA'
-uas_id = 'u031'
-fc_id = 'f04r01'
-
-#%% Functions
-def dt_to_UTCval(dtstr, fmt, local_tz='US/Eastern'):
-    time = (pytz.timezone(local_tz).localize(DT.strptime(e.text, tfmt_gpx), is_dst=None)
-                                .astimezone(pytz.utc)
-                                .timestamp())
-    return(time)
-=======
+# <<<<<<< HEAD
+# survey_id = '2016-010FA'
+# uas_id = 'u031'
+# fc_id = 'f04r01'
+#
+# #%% Functions
+# def dt_to_UTCval(dtstr, fmt, local_tz='US/Eastern'):
+#     time = (pytz.timezone(local_tz).localize(DT.strptime(e.text, tfmt_gpx), is_dst=None)
+#                                 .astimezone(pytz.utc)
+#                                 .timestamp())
+#     return(time)
+# =======
 # Enter time offset (seconds) so that imagetime + offset = log time
 toff = -4.*3600. # The GPS data is being read in local time, the images are stamped with UTC
 
@@ -46,7 +46,7 @@ def dt_to_UTCval(dtstr, in_fmt, local_tz='US/Eastern'):
                     .astimezone(pytz.utc)
                     .timestamp())
     return(timeval)
->>>>>>> origin/master
+# >>>>>>> origin/master
 
 def gpx_tag_to_pdseries(tree, namespace, tag):
     elist = tree.xpath('./def:trk//def:trkpt//def:'+tag, namespaces=namespace)
@@ -64,24 +64,24 @@ lonlat = pd.DataFrame([e.values() for e in elist], columns=['lat', 'lon'])
 # time
 tag = 'time'
 elist = tree.xpath('./def:trk//def:trkpt//def:'+tag, namespaces=namespace)
-<<<<<<< HEAD
-dt = [parser.parse(e.text) for e in elist] # parser will detect time zones
-dtz = [dti.astimezone(pytz.utc) for dti in dt]
-
-dtz = [time.mktime(dti.utctimetuple()) for dti in dt]
-dtz = [pytz.timezone(local_tz).localize(DT.strptime(e.text, tfmt_gpx), is_dst=None)
-                            .astimezone(pytz.utc) for e in elist]
-t = [dt.timestamp() for dt in img_dt]
-gpxdf = lonlat.join(pd.DataFrame({'time_utc':dtz}))
-                                    #, 'time_epoch':t}))
-# gpxdf = gpxdf.join(pd.Series(t, name='time_epoch'))
-gpxdf
-=======
+# <<<<<<< HEAD
+# dt = [parser.parse(e.text) for e in elist] # parser will detect time zones
+# dtz = [dti.astimezone(pytz.utc) for dti in dt]
+#
+# dtz = [time.mktime(dti.utctimetuple()) for dti in dt]
+# dtz = [pytz.timezone(local_tz).localize(DT.strptime(e.text, tfmt_gpx), is_dst=None)
+#                             .astimezone(pytz.utc) for e in elist]
+# t = [dt.timestamp() for dt in img_dt]
+# gpxdf = lonlat.join(pd.DataFrame({'time_utc':dtz}))
+#                                     #, 'time_epoch':t}))
+# # gpxdf = gpxdf.join(pd.Series(t, name='time_epoch'))
+# gpxdf
+# =======
 local_tz='US/Eastern'
 t = [dt_to_UTCval(e.text, tfmt_gpx, local_tz=local_tz) for e in elist]
 t = pd.Series(t, name=tag)
 gpxdf = gpxdf.join(t)
->>>>>>> origin/master
+# >>>>>>> origin/master
 
 # all other tags
 taglist = ['ele', 'ele2', 'course', 'roll', 'pitch', 'mode']
