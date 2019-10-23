@@ -8,15 +8,22 @@ This will 1) copy photos matching an altitude constraint into keep folder,
 images to a standard scheme. It was modified from update_imagefiles.py for
 use with tif files from MicaSense RedEdge.
 
+Improvements:
+    - Micasense will be organized into folders by flight. So this needs to be able to get the flight number dynamically from the folder name. Or the flight number portion of the output image filename should be removed.
+
 Requirements:
     - ExifTool by Phil Harvey must be installed
+
+Code status: Incomplete as of 10/9/2018. The function should all be functioning correctly. Some of them have been changed from functions with the same names in update_imagefiles.py. The execution section is very rough. I was trying to revise it to work for micasense photos, but then switched to working on the ipython notebook on Seth's github. 
 """
 import os
 import subprocess
 import datetime as DT
 import pytz
 import pandas as pd
-import pyproj
+# import pyproj
+import shutil
+import glob
 
 #%% Thoughts about workflow structure
 # Call ExifTool once to get all the values. Then work with values to... change filename,
@@ -40,27 +47,32 @@ def write_WHSC_exiftags(imgdir, credit, comment, keywords, contact, recursive=Fa
     subprocess.check_call(cmd, shell=True)
     return(True)
 
-def rename_image_from_exif(imgdir, img, survey_id, uas_id, fc_id):
+def rename_image_from_exif(imgdir, img, survey_id, uas_id, flight_id, cam_id):
     # save original filename to EXIF and rename file
     fullimg = os.path.join(imgdir, img)
     isotime = exifTime_to_iso(fullimg, local_tz = 'US/Eastern')
+
+    # Save original filename to OriginalFileName tag
     cmd2 = """exiftool -OriginalFileName="{} " -overwrite_original {}""".format(img, fullimg)
     subprocess.check_call(cmd2, shell=True)
+
+    # Rename file using os.rename()
     # cmd2 = """exiftool "-FileName<CreateDate" -d "%Y%m%dT%H%M%SZ.%%e" DIR""".format(img, fullimg) # use exiftool to rename... not fully developed
-    new_img = "{}_{}_{}_{}_{}".format(survey_id, uas_id, fc_id, isotime, img) # -> nnnnnnnnFA_Unnn_fnncnn_yyyymmddThhmmssZ_origname.ext
+    new_img = "{}_{}{}{}_{}_{}".format(survey_id, uas_id, flight_id, cam_id, isotime, img) # -> nnnnnnnnFA_Unnn_fnncnn_yyyymmddThhmmssZ_origname.ext
     os.rename(fullimg, os.path.join(imgdir, new_img))
     return new_img
 
-def rename_images(imgdir, f, survey_id, uas_id, fc_id):
+def rename_images(imgdir, survey_id, uas_id, flight_id, cam_id):
     for f in os.listdir(imgdir):
-        if f.lower().endswith('.jpg'):
-            rename_image_from_exif(imgdir, f, survey_id, uas_id, fc_id)
+        if f.lower().endswith('.jpg') or f.lower().endswith('.tif') or f.lower().endswith('.dng'):
+            rename_image_from_exif(imgdir, f, survey_id, uas_id, flight_id, cam_id)
     return
 
 def exifTime_to_iso(fullimg, local_tz='US/Eastern', iso_fmt="%Y%m%dT%H%M%SZ"):
     # extract datetime from EXIF, convert to UTC, and format for filename
     cmd1 = """exiftool -s3 -DateTimeOriginal {}""".format(fullimg) # return values only
     dtstr = subprocess.check_output(cmd1, shell=True)[:-1]
+    in_fmt = '%Y:%m:%d %H:%M:%S'
     dt = DT.datetime.strptime(dtstr, in_fmt)
     eastern = pytz.timezone(local_tz)
     dt = eastern.localize(dt, is_dst=None)
@@ -151,21 +163,61 @@ def filter_photos_by_altitude(imgdir, min_altitude, max_altitude):
 
 
 #%% Input Values
-imgdir = r"/Users/esturdivant/Documents/Projects/UAS_BlackBeach/Data_publishing/data_release/Images/bb20160318_UAS_images"
-fan = "2016-010-FA"
-survey_id = fan.replace("-","")
+imgdir = r"/Users/esturdivant/Desktop/photos_test"
+fan = "2018-046-FA"
+survey_id = fan.replace("-","") # Use the Field Activity Number without the dashes
 uas_id = ""
-fc_id = "f01c01"
+cam_id = "m01" # intended for 6 digits indicating flight and camera ID.
 
-credit = "Woods Hole Analytics, in collaboration with Marine Biological Laboratory and the U.S. Geological Survey"
-comment = "Low-altitude aerial photograph of Black Beach, Falmouth, MA from survey 2016-010-FA (https://cmgds.marine.usgs.gov/fan_info.php?fa={}).".format(fan)
-keywords = "Black Beach, Great Sippewissett Marsh, Falmouth, Massachusetts, {}, UAS, nadir, USGS".format(fan)
+# Values for image headers
+credit = "USGS"
+comment = "Multispectral low-altitude aerial photograph from survey {0} (https://cmgds.marine.usgs.gov/fan_info.php?fa={0}).".format(fan)
+keywords = "Great Marsh, Sandy Neck, Barnstable County, Massachusetts, {}, UAS, nadir, multispectral, USGS".format(fan)
 contact = "WHSC_data_contact@usgs.gov"
 
 min_altitude = 70
 max_altitude = 95
 
 #%% Execute
-imgdir = filter_photos_by_altitude(imgdir, min_altitude, max_altitude)
+flight_id = 'X'
+for root, dirs, files in os.walk(imgdir):
+    if os.path.basename(root).startswith('f'):
+        flight_id = os.path.basename(root)
+    for d in dirs:
+        print(root + ' --- ' + d)# print d in dirs:
+        print('flight num: {}'.format(flight_id))
+        idir = os.path.join(root,d)
+        imagelist = glob.glob(os.path.join(idir,'*.tif'))
+        if len(imagelist):
+            rename_images(idir, survey_id, uas_id, flight_id, cam_id)
+
+dt = [datetime.datetime.strptime(Image.open(f)._getexif()[36867], fmt) for f in flist]
+imgdf = pd.DataFrame({'orig_name': [os.path.basename(f) for f in flist],
+                      'time_utc': dt,
+                      'time_epoch': pd.to_datetime(dt, format = tfmt_exif).astype(np.int64) // 10**9,
+                      'time_iso': [t.strftime(iso_fmt) for t in dt],
+                      'new_name': np.nan,
+                      'lon': np.nan,
+                      'lat': np.nan,
+                      'ele': np.nan,
+                      'interpolated': 0},
+                        columns=['new_name', 'lat', 'lon', 'ele', 'time_utc', 'orig_name',
+                                 'time_epoch', 'time_iso', 'interpolated'])
+
+
+rename_images(imgdir, survey_id, uas_id, flight_id, cam_id)
 write_WHSC_exiftags(imgdir, credit, comment, keywords, contact, recursive=False)
-rename_images(imgdir, f, survey_id, uas_id, fc_id)
+
+# alternative rename_images, which could allow for recursive call
+cmd1 = """exiftool -s3 -DateTimeOriginal {}""".format(fullimg) # return values only
+new_img = "{}_{}{}{}_{}_{}".format(survey_id, uas_id, flight_id, cam_id, isotime, img) # -> nnnnnnnnFA_Unnn_fnncnn_yyyymmddThhmmssZ_origname.ext
+cmd2 = """exiftool "-FileName<CreateDate" -d "{}_{}{}{}_%Y%m%dT%H%M%SZ.%%e" DIR""".format(survey_id, uas_id, flight_id, cam_id, img, fullimg) # use exiftool to rename... not fully developed
+
+dtstr = subprocess.check_output(cmd1, shell=True)[:-1]
+
+# Delete originals
+cmd = "exiftool -delete_original {}".format(imgdir)
+subprocess.check_call(cmd, shell=True)
+
+
+imgdir = filter_photos_by_altitude(imgdir, min_altitude, max_altitude)
